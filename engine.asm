@@ -23,6 +23,9 @@ PPU_TILE         = $01
 PPU_ATTRIBUTES   = $02
 PPU_HPOSITION    = $03
 
+PPU_ATTR_HFLIP        = 1 << 6
+PPU_ATTR_VFLIP        = 1 << 7
+
 ; Object Attribute Constants
 OBJECT_GRAVITY_FLAG    = 1 << 0
 OBJECT_FRICTION_FLAG   = 1 << 1
@@ -45,6 +48,8 @@ TempX             .rs 1
 TempY             .rs 1
 Controller1Status .rs 1
 Controller2Status .rs 1
+
+Timer             .rs 1
 
 ObjectNum         .rs 1    ; The number of objects
 ObjectFlags       .rs 10   ; See: Object Attribute Constants
@@ -130,6 +135,9 @@ LoadSpritesLoop:
 
 ;;; INITIALIZE VALUES
 
+  LDA #$00
+  STA Timer
+
   LDA #$02
   STA ObjectNum
 
@@ -178,6 +186,23 @@ ReadControllerLoop:
   BCC ReadControllerLoop
   RTS
 
+;; UpdateTimer
+; Runs every frame and increments the Timer value.
+; Used to delay or schedule events.
+UpdateTimer:
+  LDA Timer
+  CMP #$FF
+  BNE UpdateTimerInc
+  LDA $00
+  STA Timer
+  RTS
+UpdateTimerInc:
+  CLC
+  ADC #$01
+  STA Timer
+  RTS
+
+
 ;; MoveHorizontal and MoveVertical
 ; Is used to move multiple sprites (that make up an object) at the same time
 ; Param1: Number of sprites
@@ -191,13 +216,13 @@ MoveHorizontal:
   LDA Param2        ; Load the starting sprite address into A
   CLC
   ADC #$03          ; Add an offset of 3 so that the horizontal values will be modified instead of the vertical values
-  TAX               ; Transter the modified value from A to X
+  TAX               ; Transfer the modified value from A to X
 
 MoveSprites:
   LDY Param1               ; Load the number of sprites into Y for the main loop
   LDA Param3               ; Load the speed to check the direction bit
   AND #%10000000           ; Check the direction bit
-  BEQ MoveSpritesSubLoop   ; Go to the loop which will subtract from the horizontal or vertical value
+  BEQ MoveSpritesSub       ; Go to the loop which will subtract from the horizontal or vertical value
 MoveSpritesAddLoop:        ; Otherwise continue into this loop and add to the horizontal or verrtical value
   LDA Param3               ; Load the speed
   AND #%01111111           ; Remove the direction bit
@@ -211,6 +236,11 @@ MoveSpritesAddLoop:        ; Otherwise continue into this loop and add to the ho
   DEY
   BNE MoveSpritesAddLoop
   RTS
+MoveSpritesSub:
+  LDA #%10000000
+  SEC
+  SBC Param3
+  STA Param3
 MoveSpritesSubLoop:
   LDA $0200, x             ; Load the speed
   SEC
@@ -231,9 +261,9 @@ UpdatePositions:
 UpdatePositionsLoop:
   LDA ObjectSpriteNum, x   ; Number of sprites
   STA Param1
-  LDA ObjectSprite, x   ; Starting sprite
+  LDA ObjectSprite, x      ; Starting sprite
   STA Param2
-  LDA ObjectHSpeed, x   ; Horizontal speed
+  LDA ObjectHSpeed, x      ; Horizontal speed
   STA Param3
   ; TODO: Store and restore the X and Y values in the subroutine?
   STX TempX   ; Stores the X value because subroutines will change the value
@@ -256,47 +286,34 @@ UpdateSimulation:
 UpdateSimulationLoop:
 Gravity:
   LDA ObjectFlags, x            ; Object's flags
-  AND #OBJECT_GRAVITY_FLAG      ; Check if the friction flag is set
-  BEQ GravitySkip               ; Skip friction if the flag is not set
+  AND #OBJECT_GRAVITY_FLAG      ; Check if the gravity flag is set
+  BEQ GravitySkip               ; Skip gravity if the flag is not set
 
   LDA ObjectSprite, x
   ;CLC
-  ;ADC #PPU_VPOSITION           ; Move the offset to the vertical position (not neeeded because PPU_VPOSITION = 0)
+  ;ADC #PPU_VPOSITION           ; Move the offset to the vertical position (not needed because PPU_VPOSITION = 0)
   TAY
   LDA $0200, y
   CMP #$D0
   BCS GravityStop
 
-  LDA ObjectVSpeed, x           ; Get the current vertical speed
-  AND #%01111111                ; Check if the speed is zero
-  BEQ GravityZero
-  LDA ObjectVSpeed, x           ; Get the current vertical speed
-  AND #%10000000                ; Check the direction of the speed
-  BEQ GravitySub
   LDA ObjectVSpeed, x
   CLC
   ADC #$01
+  ; TODO: Check max speed
   STA ObjectVSpeed, x
   JMP GravitySkip
-GravitySub:
-  LDA ObjectVSpeed, x
-  SEC
-  SBC #$01
-  STA ObjectVSpeed, x
-  JMP GravitySkip
-GravityZero:
-  LDA #%10000001
-  STA ObjectVSpeed, x
-  JMP GravitySkip
+
 GravityStop:
   LDA ObjectFlags, x
   AND #OBJECT_BOUNCE_FLAG
-  BEQ NoBounce
-  LDA #$10
+  BEQ GravityNoBounce
+  LDA #$78
   STA ObjectVSpeed, x
   JMP GravitySkip
-NoBounce:
-  LDA #$00
+GravityNoBounce:
+  ; Check if the object is near the ground
+  LDA #$80
   STA ObjectVSpeed, x
 GravitySkip:
 Friction:
@@ -304,15 +321,25 @@ Friction:
   LDA ObjectFlags, x            ; Object's flags
   AND #OBJECT_FRICTION_FLAG     ; Check if the friction flag is set
   BEQ FrictionSkip              ; Skip friction if the flag is not set
-  LDA ObjectHSpeed, x           ; Horizontal speed
-  AND #%01111111                ; Check if speed is zero
+  LDA ObjectHSpeed, x           ; Load the horizontal speed
+  AND #%01111111                ; Check if the speed is zero
   BEQ FrictionSkip
-  LDA ObjectHSpeed, x           ; Horizontal speed
-  ; TODO: Check that the friction is not larger than the current speed
-  ; TODO: CHECK FOR UNDERFLOW!
+  LDA ObjectHSpeed, x           ; Load the horizontal speed
+  AND #%10000000                ; Check the direction of the speed
+  BEQ FrictionAdd
+
+  LDA ObjectHSpeed, x           ; Load the horizontal speed
   SEC
-  SBC #OBJECT_FRICTION          ; Subtract 1 from the horizontal speed
+  SBC #OBJECT_FRICTION
   STA ObjectHSpeed, x           ; Put the speed back into the correct position
+  JMP FrictionSkip
+
+FrictionAdd:
+  LDA ObjectHSpeed, x           ; Load the horizontal speed
+  CLC
+  ADC #OBJECT_FRICTION
+  STA ObjectHSpeed, x           ; Put the speed back into the correct position
+
 FrictionSkip:
   INX
   CPX ObjectNum
@@ -331,7 +358,9 @@ ButtonHandler:
   beq NotPressingLeft
   ; Handle presses.
   LDX #$00
-  LDA #$03
+  LDA ObjectHSpeed, x
+  SEC
+  SBC #$02
   STA ObjectHSpeed, x
 NotPressingLeft:
   lda Controller1Status
@@ -339,12 +368,14 @@ NotPressingLeft:
   beq NotPressingRight
   ; Handle presses.
   LDX #$00
-  LDA #$83
+  LDA ObjectHSpeed, x
+  CLC
+  ADC #$02
   STA ObjectHSpeed, x
 NotPressingRight:
   lda Controller1Status
-  and #CONTROLLER_UP
-  beq NotPressingUp
+  and #CONTROLLER_A
+  beq NotPressingA
   ; Handle presses.
 
   LDA ObjectSprite, x
@@ -353,12 +384,12 @@ NotPressingRight:
   TAY
   LDA $0200, y
   CMP #$D0
-  BCC NotPressingUp
+  BCC NotPressingA
 
   LDX #$00
-  LDA #$09
+  LDA #$78
   STA ObjectVSpeed, x
-NotPressingUp:
+NotPressingA:
   lda Controller1Status
   and #CONTROLLER_DOWN
   beq NotPressingDown
@@ -378,11 +409,15 @@ NMI:
   STA $4014       ; set the high byte (02) of the RAM address, start the transfer
 
 ;;; ENGINE CALLS
+  JSR UpdateTimer
+  LDA Timer
+  AND #%00000001
+  BEQ EngineSkip
   JSR UpdatePositions
   JSR UpdateSimulation
   JSR ReadController
   JSR ButtonHandler
-
+EngineSkip:
   RTI             ; return from interrupt
 
 ;;;; PRG BANK 2
@@ -403,10 +438,10 @@ sampleSprite:
   .db $00, $10
 
 sampleVSpeed:
-  .db $00, $01
+  .db $80, $81
 
 sampleHSpeed:
-  .db $00, $84
+  .db $80, $84
 
 sprites:
      ;vert tile attr horiz
