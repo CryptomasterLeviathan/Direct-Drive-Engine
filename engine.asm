@@ -127,10 +127,57 @@ LoadSpritesLoop:
   BNE LoadSpritesLoop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero
                         ; if compare was equal to 32, keep going down
 
+LoadBackgroundSetup:
+  LDA $2002         ; TODO: THIS IS CAUSING THE BACKGROUND LOADING TO RESET
+  LDA #$20
+  STA $2006
+  LDA #$00
+  STA $2006
+
+  LDY #$00
+LoadBackground:
+  INY
+  LDX backgroundRLE, y    ; Load the run length
+  INY                     ; Set Y to the position of the tile location
+  LDA backgroundRLE, y    ; Load the tile location
+LoadBackgroundRowLoop:
+  STA $2007
+  DEX
+  BNE LoadBackgroundRowLoop
+  CPY backgroundRLE       ; Check if we reached the end of the row
+  BNE LoadBackground
+
+
+;  LDY #$1E
+;  LDX #$00
+;LoadBackgroundLoop:
+;  LDA background, x
+;  STA $2007
+;  INX
+;  CPX #$20
+;  BNE LoadBackgroundLoop
+;  LDX #$00
+;  DEY
+;  BNE LoadBackgroundLoop
+
+LoadAttribute:
+  LDA $2002
+  LDA #$23
+  STA $2006
+  LDA #$C0
+  STA $2006
+  LDX #$00
+LoadAttributeLoop:
+  LDA attribute, x
+  STA $2007
+  INX
+  CPX #$08
+  BNE LoadAttributeLoop
+
   LDA #%10000000   ; enable NMI, sprites from Pattern Table 1
   STA $2000
 
-  LDA #%00010000   ; enable sprites
+  LDA #%00011110   ; enable sprites
   STA $2001
 
 ;;; INITIALIZE VALUES
@@ -418,6 +465,16 @@ NMI:
   JSR ReadController
   JSR ButtonHandler
 EngineSkip:
+
+  ;;This is the PPU clean up section, so rendering the next frame starts properly.
+  LDA #%10000000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+  STA $2000
+  LDA #%00011110   ; enable sprites, enable background, no clipping on left side
+  STA $2001
+  LDA #$00        ;;tell the ppu there is no background scrolling
+  STA $2005
+  STA $2005
+
   RTI             ; return from interrupt
 
 ;;;; PRG BANK 2
@@ -425,8 +482,28 @@ EngineSkip:
   .bank 1
   .org $E000
 palette:
-  .db $0F,$31,$32,$33,$34,$35,$36,$37,$38,$39,$3A,$3B,$3C,$3D,$3E,$0F
-  .db $0F,$11,$38,$17,$31,$02,$38,$3C,$0F,$1C,$15,$14,$31,$02,$38,$3C
+  .db $22,$29,$1A,$0F,  $22,$36,$17,$0F,  $22,$30,$21,$0F,  $22,$27,$17,$0F   ;;background palette
+  .db $22,$1C,$15,$14,  $22,$02,$38,$3C,  $22,$1C,$15,$14,  $22,$02,$38,$3C   ;;sprite palette
+
+background:
+  .db $24,$24,$24,$01,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24  ;;row 1
+  .db $24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24  ;;all sky ($24 = sky)
+
+  .db $24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24  ;;row 2
+  .db $24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24  ;;all sky
+
+  .db $24,$24,$24,$24,$01,$02,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24  ;;row 3
+  .db $24,$24,$24,$24,$24,$24,$24,$01,$02,$24,$24,$24,$24,$24,$24,$24  ;;some brick tops
+
+  .db $24,$24,$24,$24,$11,$12,$24,$24,$24,$24,$24,$24,$24,$24,$24,$24  ;;row 4
+  .db $24,$24,$24,$24,$24,$24,$24,$11,$24,$24,$24,$24,$24,$24,$24,$24  ;;brick bottoms
+
+backgroundRLE:
+  .db $10,  $FF,$24,  $FF,$24,  $FF,$24,  $A3,$24,  $08,$24,  $08,$01,  $08,$02,  $08,$24
+
+attribute:
+  .db %00000000, %00000000, %0000000, %00000000, %00000000, %00000000, %00000000, %00000000
+
 
 sampleFlags:
   .db %00000011, %00000101
