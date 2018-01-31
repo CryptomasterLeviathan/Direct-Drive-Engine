@@ -1,4 +1,4 @@
-engine.fns
-engine.nes
-engine.nes.deb
+*.fns
+*.nes
+*.nes.deb
 *~
