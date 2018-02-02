@@ -39,7 +39,7 @@ NotPressingRight:
   BCC NotPressingA
 
   LDX #$00
-  LDA #$78
+  LDA #$70
   STA ObjectVSpeed, x
 NotPressingA:
   lda Controller1Status

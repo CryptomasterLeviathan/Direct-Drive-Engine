@@ -165,7 +165,38 @@ FrictionAdd:
   ADC #OBJECT_FRICTION
   STA ObjectHSpeed, x           ; Put the speed back into the correct position
 FrictionSkip:
+StaticCollisions:
+  ; TODO: Check for enable flag?
+  ; Check collision with current dynamic object and all static objects
+  ; Static object will be stored sorted based on x position
+  LDA StaticNum
+  BEQ StaticCollisionsSkip      ; Skip check if there are no static objects
+  LDY #$00
+  ; Check if the right side of the dynamic object is greater than the left side of the static object
+  LDA $0200, x
+
+StaticCollisionsSkip:
   INX
   CPX ObjectNum
   BNE UpdateSimulationLoop
+  RTS
+
+
+
+; Helper function to update object positions in the object list
+UpdateObjectList:
+  LDY #$00                 ; Use Y to index through list
+  LDX #$00
+UpdateObjectListLoop:
+  LDX ObjectSprite, y
+  LDA $0200, x             ; Put the updated position back into the PPU
+  STA ObjectX, y
+  INX
+  INX
+  INX
+  LDA $0200, x
+  STA ObjectY, y
+  INY
+  CPY ObjectNum
+  BNE UpdateObjectListLoop
   RTS

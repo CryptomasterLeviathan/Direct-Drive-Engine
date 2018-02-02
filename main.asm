@@ -126,9 +126,15 @@ LoadAttributeLoop:
   LDA #$00
   STA Timer
 
+  ; Set the number of objects in the list
   LDA #$02
   STA ObjectNum
 
+  ; Set the number of static objects in the list
+  LDA #$01
+  STA StaticNum
+
+  ; Set sample values in the object, and static object lists
 LoadObjects:
   LDX #$00
 LoadObjectsLoop:
@@ -142,9 +148,30 @@ LoadObjectsLoop:
   STA ObjectVSpeed, x
   LDA sampleHSpeed, x
   STA ObjectHSpeed, x
+  LDA sampleWidth, x
+  STA ObjectWidth, x
+  LDA sampleHeight, x
+  STA ObjectHeight, x
   INX
   CPX ObjectNum
   BNE LoadObjectsLoop
+
+LoadStatic:
+  LDX #$00
+LoadStaticLoop:
+  LDA sampleStaticFlags, x
+  STA StaticFlags, x
+  LDA sampleStaticX, x
+  STA StaticX, x
+  LDA sampleStaticY, x
+  STA StaticY, x
+  LDA sampleStaticWidth, x
+  STA StaticWidth, x
+  LDA sampleStaticHeight, x
+  STA StaticHeight, x
+  INX
+  CPX StaticNum
+  BNE LoadStaticLoop
 
 Forever:
   JMP Forever     ;jump back to Forever, infinite loop
@@ -168,6 +195,7 @@ NMI:
   BEQ EngineSkip
   JSR UpdatePositions
   JSR UpdateSimulation
+  JSR UpdateObjectList
   JSR ReadController
   JSR ButtonHandler
 EngineSkip:
@@ -192,7 +220,39 @@ palette:
   .db $0F,$11,$38,$17,$31,$02,$38,$3C,$0F,$1C,$15,$14,$31,$02,$38,$3C
 
 backgroundRLE:
-  .db $10,  $FF,$24,  $FF,$24,  $FF,$24,  $A3,$24,  $08,$24,  $08,$01,  $08,$02,  $08,$24
+  ; 32 tiles wide
+  ; 30 tiles high
+  .db $48
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $0F,$24, $01,$01, $01,$02, $0F,$24
+  .db $0F,$24, $01,$11, $01,$12, $0F,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
+  .db $20,$24
 
 attribute:
   .db %00000000, %00000000, %0000000, %00000000, %00000000, %00000000, %00000000, %00000000
@@ -212,6 +272,28 @@ sampleVSpeed:
 
 sampleHSpeed:
   .db $80, $84
+
+sampleWidth:
+  .db $10, $08
+
+sampleHeight:
+  .db $10, $08
+
+sampleStaticFlags:
+  .db $00
+
+sampleStaticX:
+  .db $70
+
+sampleStaticY:
+  .db $78
+
+sampleStaticWidth:
+  .db $10
+
+sampleStaticHeight:
+  .db $10
+
 
 sprites:
      ;vert tile attr horiz
