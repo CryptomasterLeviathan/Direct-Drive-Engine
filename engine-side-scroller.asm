@@ -33,13 +33,13 @@ NotPressingRight:
   LDA ObjectSprite, x
   ;CLC
   ;ADC #PPU_VPOSITION           ; Move the offset to the vertical position (not neeeded because PPU_VPOSITION = 0)
-  TAY
-  LDA $0200, y
-  CMP #$D0
-  BCC NotPressingA
+  ;TAY
+  ;LDA $0200, y
+  ;CMP #$D0
+  ;BCC NotPressingA
 
   LDX #$00
-  LDA #$70
+  LDA #$77
   STA ObjectVSpeed, x
 NotPressingA:
   lda Controller1Status

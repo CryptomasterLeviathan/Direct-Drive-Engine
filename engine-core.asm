@@ -165,23 +165,67 @@ FrictionAdd:
   ADC #OBJECT_FRICTION
   STA ObjectHSpeed, x           ; Put the speed back into the correct position
 FrictionSkip:
-StaticCollisions:
-  ; TODO: Check for enable flag?
-  ; Check collision with current dynamic object and all static objects
-  ; Static object will be stored sorted based on x position
-  LDA StaticNum
-  BEQ StaticCollisionsSkip      ; Skip check if there are no static objects
-  LDY #$00
-  ; Check if the right side of the dynamic object is greater than the left side of the static object
-  LDA $0200, x
-
-StaticCollisionsSkip:
+  JSR StaticCollisions
   INX
   CPX ObjectNum
   BNE UpdateSimulationLoop
   RTS
 
 
+StaticCollisions:
+  ; TODO: Check for enable flag?
+  ; Check collision with current dynamic object and all static objects
+  ; Static object will be stored sorted based on x position
+
+  ; Check if the object is moving
+  LDA ObjectVSpeed, x
+  AND #%01111111
+  BEQ StaticCollisionsSkip
+
+  ; Skip check if there are no static objects
+  LDA StaticNum
+  BEQ StaticCollisionsSkip
+  ; Loop through each static object
+  LDY #$00
+  ; Check if the right side of the dynamic object is greater than the left side of the static object
+  LDA ObjectX, x
+  CLC
+  ADC ObjectWidth, x
+  CLC
+  CMP StaticX, y
+  BCC StaticCollisionsSkip   ; Branches if the static object's X is larger than the dynamic object's x (e.g. skips the rest of the checks and moves on)
+  ; Check if the left side of the dynamic object is less than the right side of the static object
+  CLC
+  LDA StaticX, y
+  ADC StaticWidth, y
+  CMP ObjectX, x
+  BCC StaticCollisionsSkip
+  ; Check if the top of the dynamic object is greater than the bottom of the static object
+  LDA StaticY, y
+  CLC
+  ADC StaticHeight, y
+  CMP ObjectY, x
+  BCC StaticCollisionsSkip
+StaticCollisionsLoop
+  ; Check if the bottom of the dynamic object is less than the top of the static object (Remember: Down is positive X)
+  LDA ObjectVSpeed, x
+  SEC
+  SBC #%10000000
+  CLC
+  ADC ObjectY, x
+  CLC
+  ADC ObjectHeight, x
+  CMP StaticY, y
+  BCC StaticCollisionsSkip
+
+  LDA ObjectVSpeed, x
+  SEC
+  SBC #$01
+  STA ObjectVSpeed, x
+  JMP StaticCollisionsLoop
+
+StaticCollisionsSkip:
+  RTS
 
 ; Helper function to update object positions in the object list
 UpdateObjectList:
@@ -190,12 +234,12 @@ UpdateObjectList:
 UpdateObjectListLoop:
   LDX ObjectSprite, y
   LDA $0200, x             ; Put the updated position back into the PPU
-  STA ObjectX, y
+  STA ObjectY, y
   INX
   INX
   INX
   LDA $0200, x
-  STA ObjectY, y
+  STA ObjectX, y
   INY
   CPY ObjectNum
   BNE UpdateObjectListLoop

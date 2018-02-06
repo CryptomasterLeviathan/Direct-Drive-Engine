@@ -193,11 +193,11 @@ NMI:
   LDA Timer
   AND #%00000001
   BEQ EngineSkip
-  JSR UpdatePositions
   JSR UpdateSimulation
-  JSR UpdateObjectList
   JSR ReadController
   JSR ButtonHandler
+  JSR UpdatePositions
+  JSR UpdateObjectList
 EngineSkip:
 
   ;;This is the PPU clean up section, so rendering the next frame starts properly.
@@ -274,33 +274,33 @@ sampleHSpeed:
   .db $80, $84
 
 sampleWidth:
-  .db $10, $08
+  .db $0F, $08
 
 sampleHeight:
-  .db $10, $08
+  .db $0F, $08
 
 sampleStaticFlags:
   .db $00
 
 sampleStaticX:
-  .db $70
-
-sampleStaticY:
   .db $78
 
+sampleStaticY:
+  .db $70
+
 sampleStaticWidth:
-  .db $10
+  .db $0F
 
 sampleStaticHeight:
-  .db $10
+  .db $0F
 
 
 sprites:
      ;vert tile attr horiz
-  .db $80, $32, $00, $80   ; sprite 0
-  .db $80, $33, $00, $88   ; sprite 1
-  .db $88, $34, $00, $80   ; sprite 2
-  .db $88, $35, $00, $88   ; sprite 3
+  .db $70, $32, $00, $78   ; sprite 0
+  .db $70, $33, $00, $80   ; sprite 1
+  .db $78, $34, $00, $78   ; sprite 2
+  .db $78, $35, $00, $80   ; sprite 3
   .db $50, $00, $00, $50   ; Star test sprite
 
   .org $FFFA     ;first of the three vectors starts here
