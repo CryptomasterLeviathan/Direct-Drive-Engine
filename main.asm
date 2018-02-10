@@ -131,7 +131,7 @@ LoadAttributeLoop:
   STA ObjectNum
 
   ; Set the number of static objects in the list
-  LDA #$01
+  LDA #$04
   STA StaticNum
 
   ; Set sample values in the object, and static object lists
@@ -193,9 +193,9 @@ NMI:
   LDA Timer
   AND #%00000001
   BEQ EngineSkip
-  JSR UpdateSimulation
   JSR ReadController
   JSR ButtonHandler
+  JSR UpdateSimulation
   JSR UpdatePositions
   JSR UpdateObjectList
 EngineSkip:
@@ -222,9 +222,7 @@ palette:
 backgroundRLE:
   ; 32 tiles wide
   ; 30 tiles high
-  .db $48
-  .db $20,$24
-  .db $20,$24
+  .db $64
   .db $20,$24
   .db $20,$24
   .db $20,$24
@@ -239,13 +237,15 @@ backgroundRLE:
   .db $20,$24
   .db $0F,$24, $01,$01, $01,$02, $0F,$24
   .db $0F,$24, $01,$11, $01,$12, $0F,$24
+  .db $10,$01, $01,$02, $0F,$24
+  .db $10,$11, $01,$12, $0F,$24
   .db $20,$24
   .db $20,$24
   .db $20,$24
-  .db $20,$24
-  .db $20,$24
-  .db $20,$24
-  .db $20,$24
+  .db $0D,$24, $01,$01, $01,$02, $11,$24
+  .db $0D,$24, $01,$11, $01,$12, $11,$24
+  .db $0D,$24, $01,$01, $12,$02
+  .db $0D,$24, $01,$11, $12,$12
   .db $20,$24
   .db $20,$24
   .db $20,$24
@@ -271,7 +271,7 @@ sampleVSpeed:
   .db $80, $81
 
 sampleHSpeed:
-  .db $80, $84
+  .db $80, $80
 
 sampleWidth:
   .db $0F, $08
@@ -280,27 +280,27 @@ sampleHeight:
   .db $0F, $08
 
 sampleStaticFlags:
-  .db $00
+  .db $00, $00, $00, $00
 
 sampleStaticX:
-  .db $78
+  .db $00, $78, $68, $68
 
 sampleStaticY:
-  .db $70
+  .db $70, $60, $A8, $98
 
 sampleStaticWidth:
-  .db $0F
+  .db $88, $10, $90, $10
 
 sampleStaticHeight:
-  .db $0F
+  .db $0F, $10, $10, $10
 
 
 sprites:
      ;vert tile attr horiz
-  .db $70, $32, $00, $78   ; sprite 0
-  .db $70, $33, $00, $80   ; sprite 1
-  .db $78, $34, $00, $78   ; sprite 2
-  .db $78, $35, $00, $80   ; sprite 3
+  .db $10, $32, $00, $78   ; sprite 0
+  .db $10, $33, $00, $80   ; sprite 1
+  .db $18, $34, $00, $78   ; sprite 2
+  .db $18, $35, $00, $80   ; sprite 3
   .db $50, $00, $00, $50   ; Star test sprite
 
   .org $FFFA     ;first of the three vectors starts here

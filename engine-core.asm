@@ -123,8 +123,6 @@ Gravity:
   ;ADC #PPU_VPOSITION           ; Move the offset to the vertical position (not needed because PPU_VPOSITION = 0)
   TAY
   LDA $0200, y
-  CMP #$D0
-  BCS GravityStop
   LDA ObjectVSpeed, x
   CLC
   ADC #$01
@@ -185,8 +183,15 @@ StaticCollisions:
   ; Skip check if there are no static objects
   LDA StaticNum
   BEQ StaticCollisionsSkip
+
+  ; Set a flag that the object is not on the ground
+  LDA ObjectFlags, x
+  AND #%11111011
+  STA ObjectFlags, x
+
   ; Loop through each static object
   LDY #$00
+StaticCollisionsMainLoop:
   ; Check if the right side of the dynamic object is greater than the left side of the static object
   LDA ObjectX, x
   CLC
@@ -200,13 +205,17 @@ StaticCollisions:
   ADC StaticWidth, y
   CMP ObjectX, x
   BCC StaticCollisionsSkip
-  ; Check if the top of the dynamic object is greater than the bottom of the static object
+  ; Check if the dynamic object is going up or down
+  LDA ObjectVSpeed, x
+  AND #%10000000
+  BEQ StaticCollisionsSub
+  ; Check if the bottom of the dynamic object is greater than the top of the static object
   LDA StaticY, y
-  CLC
-  ADC StaticHeight, y
+  SEC
+  SBC ObjectHeight, x
   CMP ObjectY, x
   BCC StaticCollisionsSkip
-StaticCollisionsLoop
+StaticCollisionsAddLoop:
   ; Check if the bottom of the dynamic object is less than the top of the static object (Remember: Down is positive X)
   LDA ObjectVSpeed, x
   SEC
@@ -217,15 +226,57 @@ StaticCollisionsLoop
   ADC ObjectHeight, x
   CMP StaticY, y
   BCC StaticCollisionsSkip
+  ; Subtract 1 from the speed and check if it will still collide
+  ; Set a flag saying it is on the ground
+  LDA ObjectFlags, x
+  ORA #%00000100
+  STA ObjectFlags, x
 
   LDA ObjectVSpeed, x
   SEC
   SBC #$01
   STA ObjectVSpeed, x
-  JMP StaticCollisionsLoop
+  JMP StaticCollisionsAddLoop
+
+StaticCollisionsSub:
+  ; Check if the top of the dynamic object is greater than the bottom of the static object
+  LDA StaticY, y
+  CLC
+  ADC StaticHeight, y
+  CMP ObjectY, x
+  BCS StaticCollisionsSkip
+
+  JSR StaticCollisionsSubLoop
 
 StaticCollisionsSkip:
+  INY
+  CPY StaticNum
+  BNE StaticCollisionsMainLoop
   RTS
+
+
+StaticCollisionsSubLoop:
+  LDA #%10000000
+  SEC
+  SBC ObjectVSpeed, x
+  STA Param1
+  LDA ObjectY, x
+  SEC
+  SBC Param1
+  STA Param1
+  LDA StaticY, y
+  CLC
+  ADC StaticHeight, y
+  CMP Param1
+  BCC Skip1
+  LDA ObjectVSpeed, x
+  CLC
+  ADC #$01
+  STA ObjectVSpeed, x
+  JMP StaticCollisionsSubLoop
+Skip1:
+  RTS
+
 
 ; Helper function to update object positions in the object list
 UpdateObjectList:

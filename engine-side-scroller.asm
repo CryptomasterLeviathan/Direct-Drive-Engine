@@ -39,6 +39,9 @@ NotPressingRight:
   ;BCC NotPressingA
 
   LDX #$00
+  LDA ObjectFlags, x
+  AND #%00000100
+  BEQ NotPressingA
   LDA #$77
   STA ObjectVSpeed, x
 NotPressingA:
