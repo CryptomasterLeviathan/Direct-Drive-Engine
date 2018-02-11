@@ -2,3 +2,5 @@
 *.nes
 *.nes.deb
 *~
+/docs/build
+build.sh
