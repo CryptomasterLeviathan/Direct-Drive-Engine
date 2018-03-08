@@ -10,27 +10,27 @@ ButtonHandler:
   beq NotPressingLeft
   ; Handle presses.
   LDX #$00
-  LDA ObjectHSpeed, x
+  LDA DynObjHSpeed, x
   SEC
   SBC #$02
-  STA ObjectHSpeed, x
+  STA DynObjHSpeed, x
 NotPressingLeft:
   lda Controller1Status
   and #CONTROLLER_RIGHT
   beq NotPressingRight
   ; Handle presses.
   LDX #$00
-  LDA ObjectHSpeed, x
+  LDA DynObjHSpeed, x
   CLC
   ADC #$02
-  STA ObjectHSpeed, x
+  STA DynObjHSpeed, x
 NotPressingRight:
   lda Controller1Status
   and #CONTROLLER_A
   beq NotPressingA
   ; Handle presses.
 
-  LDA ObjectSprite, x
+  LDA DynObjSprite, x
   ;CLC
   ;ADC #PPU_VPOSITION           ; Move the offset to the vertical position (not neeeded because PPU_VPOSITION = 0)
   ;TAY
@@ -39,11 +39,11 @@ NotPressingRight:
   ;BCC NotPressingA
 
   LDX #$00
-  LDA ObjectFlags, x
+  LDA DynObjFlags, x
   AND #%00000100
   BEQ NotPressingA
   LDA #$77
-  STA ObjectVSpeed, x
+  STA DynObjVSpeed, x
 NotPressingA:
   lda Controller1Status
   and #CONTROLLER_DOWN
@@ -51,6 +51,6 @@ NotPressingA:
   ; Handle presses.
   ;LDX #$00
   ;LDA #$83
-  ;STA ObjectVSpeed, x
+  ;STA DynObjVSpeed, x
 NotPressingDown:
   RTS

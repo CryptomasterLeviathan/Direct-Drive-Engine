@@ -1,4 +1,4 @@
-  .include "engine-macros.asm"
+  .include "engine-core/macros.asm"
 
 ;;; iNES HEADER
   .inesprg 1   ; 1x 16KB PRG code
@@ -7,11 +7,11 @@
   .inesmir 1   ; background mirroring
 
 ;;; CONSTANTS
-  .include "engine-constants.asm"
+  .include "engine-core/constants.asm"
 
 ;;;; NES RAM
 ;;; MEMORY ADDRESSES
-  .include "engine-addresses.asm"
+  .include "engine-core/addresses.asm"
 
 ;;;; PRG BANK 1
 ;;; CODE FROM TUTORIAL
@@ -126,59 +126,36 @@ LoadAttributeLoop:
   LDA #$00
   STA Timer
 
+  ; Set sample values in the dynamic object list
   ; Set the number of objects in the list
   LDA #$02
-  STA ObjectNum
+  STA DynObjNum
+  ; Add sample dynamic objects: the player and a bouncing star
+  LDX #$00
+  addDynObj #$03, #$04, #$00, #$78, #$10, #$80, #$80, #$10, #$10
+  INX
+  addDynObj #$05, #$01, #$10, #$00, #$00, #$83, #$80, #$08, #$08
+
 
   ; Set the number of static objects in the list
   LDA #$04
-  STA StaticNum
-
-  ; Set sample values in the object, and static object lists
-LoadObjects:
+  STA StatObjNum
+  ; Add sample static objects
   LDX #$00
-LoadObjectsLoop:
-  LDA sampleFlags, x
-  STA ObjectFlags, x
-  LDA sampleSpriteNum, x
-  STA ObjectSpriteNum, x
-  LDA sampleSprite, x
-  STA ObjectSprite, x
-  LDA sampleVSpeed, x
-  STA ObjectVSpeed, x
-  LDA sampleHSpeed, x
-  STA ObjectHSpeed, x
-  LDA sampleWidth, x
-  STA ObjectWidth, x
-  LDA sampleHeight, x
-  STA ObjectHeight, x
+  addStatObj #$00, #$00, #$70, #$88, #$0F
   INX
-  CPX ObjectNum
-  BNE LoadObjectsLoop
-
-LoadStatic:
-  LDX #$00
-LoadStaticLoop:
-  LDA sampleStaticFlags, x
-  STA StaticFlags, x
-  LDA sampleStaticX, x
-  STA StaticX, x
-  LDA sampleStaticY, x
-  STA StaticY, x
-  LDA sampleStaticWidth, x
-  STA StaticWidth, x
-  LDA sampleStaticHeight, x
-  STA StaticHeight, x
+  addStatObj #$00, #$78, #$60, #$10, #$10
   INX
-  CPX StaticNum
-  BNE LoadStaticLoop
+  addStatObj #$00, #$68, #$A8, #$90, #$10
+  INX
+  addStatObj #$00, #$68, #$98, #$10, #$10
 
 Forever:
   JMP Forever     ;jump back to Forever, infinite loop
 
 ;;;; GAME ENGINE CODE
-  .include "engine-core.asm"
-  .include "engine-side-scroller.asm"
+  .include "engine-core/engine.asm"
+  .include "modules/platformer/engine.asm"
 
 ;;;; SYSTEM INTERRUPTS
 
@@ -256,44 +233,6 @@ backgroundRLE:
 
 attribute:
   .db %00000000, %00000000, %0000000, %00000000, %00000000, %00000000, %00000000, %00000000
-
-
-sampleFlags:
-  .db %00000011, %00000101
-
-sampleSpriteNum:
-  .db $04, $01
-
-sampleSprite:
-  .db $00, $10
-
-sampleVSpeed:
-  .db $80, $81
-
-sampleHSpeed:
-  .db $80, $80
-
-sampleWidth:
-  .db $0F, $08
-
-sampleHeight:
-  .db $0F, $08
-
-sampleStaticFlags:
-  .db $00, $00, $00, $00
-
-sampleStaticX:
-  .db $00, $78, $68, $68
-
-sampleStaticY:
-  .db $70, $60, $A8, $98
-
-sampleStaticWidth:
-  .db $88, $10, $90, $10
-
-sampleStaticHeight:
-  .db $0F, $10, $10, $10
-
 
 sprites:
      ;vert tile attr horiz

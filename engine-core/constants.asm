@@ -9,6 +9,7 @@ CONTROLLER_LEFT     = 1 << 1
 CONTROLLER_RIGHT    = 1 << 0
 
 ; PPU Constants
+PPU              = $0200
 PPU_VPOSITION    = $00
 PPU_TILE         = $01
 PPU_ATTRIBUTES   = $02
